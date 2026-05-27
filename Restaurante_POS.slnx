@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="RestaurantePOS.Domain/RestaurantePOS.Domain.csproj" />
+  <Project Path="RestaurantePOS.Infrastructure/RestaurantePOS.Infrastructure.csproj" />
+  <Project Path="RestaurantePOS.Tests/RestaurantePOS.Tests/RestaurantePOS.Tests.csproj" Id="4ba5f465-a8a3-4cf0-844b-54877d2ea71d" />
+  <Project Path="RestaurantePOS/RestaurantePOS.csproj" />
+</Solution>

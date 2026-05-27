@@ -1,0 +1,98 @@
+@model RestaurantePOS.Domain.Entities.Orden
+@{
+    Layout = null;
+    ViewData["Title"] = "Opciones Mesa " + ViewBag.NumeroMesa;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Prime Steakhouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <style>
+        body { background-color: #121212; color: #E3E2E6; }
+        .bg-surface { background-color: #28282B; }
+    </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden">
+
+    <!-- Left Side: Resumen (40%) -->
+    <div class="w-[40%] flex flex-col bg-[#1A1A1C] border-r border-gray-800">
+        <header class="p-6 border-b border-gray-800 flex justify-between items-center bg-surface">
+            <div class="flex items-center gap-3">
+                <a href="/Mesas/Index" class="p-2 hover:bg-gray-700 rounded-full transition text-gray-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </a>
+                <h2 class="text-2xl font-bold">Mesa @ViewBag.NumeroMesa</h2>
+            </div>
+            <div class="text-sm font-medium px-3 py-1 rounded border border-gray-600">
+                Orden #@Model.OrdenId.ToString("D5")
+            </div>
+        </header>
+
+        <div class="flex-1 p-6 overflow-y-auto">
+            <h3 class="text-lg font-semibold text-gray-400 mb-4 tracking-wider uppercase text-xs">Desglose de Consumo</h3>
+
+            <div class="space-y-3" id="ticketItems">
+                @foreach (var det in Model.Detalles)
+                {
+                    <div class="flex justify-between items-center bg-[#252528] p-4 rounded-xl border border-gray-700">
+                        <div class="flex-1">
+                            <div class="font-semibold text-sm">@det.Plato?.Nombre</div>
+                            <div class="text-xs text-gray-400">$@det.PrecioUnitario.ToString("0.00") x @det.Cantidad</div>
+                        </div>
+                        <div class="font-bold text-green-400 text-lg">
+                            $@((det.Cantidad * det.PrecioUnitario).ToString("0.00"))
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-gray-800 bg-surface">
+            <div class="flex justify-between items-center">
+                <span class="text-xl font-medium text-gray-300">Total Acumulado:</span>
+                <span class="text-3xl font-black text-green-400">$@Model.Total.ToString("0.00")</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side: Acciones (60%) -->
+    <div class="w-[60%] flex flex-col items-center justify-center p-12 bg-surface gap-8">
+
+        <div class="text-center mb-4">
+            <span class="material-symbols-outlined text-6xl text-gray-500 mb-2">room_service</span>
+            <h2 class="text-3xl font-bold">¿Qué deseas hacer con esta mesa?</h2>
+            <p class="text-gray-400 mt-2">La mesa actualmente se encuentra en servicio.</p>
+        </div>
+
+        <div class="flex flex-col gap-6 w-full max-w-md">
+
+            <!-- Adicionar Platos -->
+            <a href="/Ordenes/TomaPedido?mesaId=@Model.MesaId" 
+               class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-6 rounded-2xl text-2xl flex justify-center items-center gap-4 transition transform hover:scale-105 active:scale-95 shadow-lg">
+                <span class="material-symbols-outlined text-3xl">add_circle</span>
+                Adicionar al Pedido
+            </a>
+
+            <!-- Proceder a Pagar -->
+            <a href="/Ordenes/Checkout?mesaId=@Model.MesaId" 
+               class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-6 rounded-2xl text-2xl flex justify-center items-center gap-4 transition transform hover:scale-105 active:scale-95 shadow-lg">
+                <span class="material-symbols-outlined text-3xl">receipt_long</span>
+                Proceder al Pago
+            </a>
+
+            <!-- Regresar -->
+            <a href="/Mesas/Index" 
+               class="w-full mt-4 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold py-4 rounded-xl text-lg flex justify-center items-center transition">
+                Volver al Salón
+            </a>
+
+        </div>
+    </div>
+
+</body>
+</html>

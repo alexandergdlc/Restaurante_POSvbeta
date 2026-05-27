@@ -1,0 +1,112 @@
+@model IEnumerable<RestaurantePOS.Domain.Entities.Mesa>
+@{
+    Layout = null;
+    ViewData["Title"] = "Panel de Mesas";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mesas - Prime Steakhouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'surface-container-high': '#28282B',
+                        'on-surface': '#E3E2E6',
+                        'on-surface-variant': '#C4C6D0',
+                        'error-container': '#93000a',
+                        'on-error-container': '#ffdad6',
+                        'tertiary-container': '#ffdea5',
+                        'on-tertiary-container': '#271900'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #121212; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-[#121212] text-on-surface overflow-hidden font-sans">
+
+    <!-- Topbar -->
+    <header class="w-full flex items-center justify-between p-4 bg-surface-container-high shadow-md">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-3xl">restaurant</span>
+            <h1 class="text-xl font-bold tracking-wider">Prime Steakhouse</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex flex-col text-right">
+                <span class="text-sm font-medium">@ViewBag.NombreMesero</span>
+                <span class="text-xs text-on-surface-variant">Turno Actual</span>
+            </div>
+            <a href="/Home/Logout" class="p-2 bg-red-900/40 rounded-full hover:bg-red-900/60 transition flex items-center text-red-200">
+                <span class="material-symbols-outlined">logout</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 overflow-y-auto">
+
+        <div class="mb-8 flex justify-between items-end border-b border-gray-800 pb-4">
+             <h2 class="text-2xl font-semibold">Salón Principal</h2>
+             <div class="flex gap-4 text-sm font-medium">
+                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-surface-container-high border border-gray-600"></div> Libre</div>
+                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#93000a]"></div> Ocupada</div>
+                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#ffdea5]"></div> Por Pagar</div>
+             </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            @foreach (var mesa in Model)
+            {
+                string bgClass = "";
+                string textClass = "";
+                string iconName = "";
+
+                if (mesa.Estado == "Ocupada")
+                {
+                    bgClass = "bg-[#93000a] hover:bg-red-800";
+                    textClass = "text-[#ffdad6]";
+                    iconName = "group";
+                }
+                else if (mesa.Estado == "Cuenta")
+                {
+                    bgClass = "bg-[#ffdea5] hover:bg-yellow-200";
+                    textClass = "text-[#271900]";
+                    iconName = "receipt_long";
+                }
+                else // Libre
+                {
+                    bgClass = "bg-surface-container-high hover:bg-gray-700 border border-gray-700";
+                    textClass = "text-on-surface-variant";
+                    iconName = "check_circle";
+                }
+
+                <a href="/Ordenes/DetalleOpcionesMesa?mesaId=@mesa.MesaId" 
+                   class="@bgClass @textClass flex flex-col items-center justify-center aspect-square rounded-3xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group">
+
+                    <span class="material-symbols-outlined text-4xl mb-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                        @iconName
+                    </span>
+
+                    <span class="text-3xl font-bold mb-1">@mesa.NumeroMesa</span>
+
+                    <div class="absolute bottom-4 text-xs font-semibold uppercase tracking-widest opacity-80 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">person</span> @mesa.Capacidad
+                    </div>
+                </a>
+            }
+        </div>
+    </main>
+
+</body>
+</html>

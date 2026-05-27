@@ -1,0 +1,109 @@
+@model RestaurantePOS.Domain.Entities.Orden
+@{
+    Layout = null;
+    ViewData["Title"] = "Checkout Mesa " + Model.Mesa.NumeroMesa;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Prime Steakhouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <style>
+        body { background-color: #1A1A1C; color: #E3E2E6; }
+        .receipt-bg { background-color: #FFFFFF; color: #000000; }
+
+        .dashed-line {
+            border-top: 2px dashed #ccc;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex justify-center items-center overflow-hidden">
+
+    <div class="w-full max-w-4xl h-[90vh] flex shadow-2xl rounded-3xl overflow-hidden">
+
+        <!-- Left Side: Receipt (40%) -->
+        <div class="w-[40%] text-black flex flex-col bg-white overflow-hidden rounded-l-3xl">
+            <div class="p-8 pb-4 flex flex-col items-center">
+                <span class="material-symbols-outlined text-4xl mb-2 text-gray-800">restaurant</span>
+                <h1 class="text-xl font-black uppercase text-center tracking-widest text-gray-900">Prime Steakhouse</h1>
+                <p class="text-xs text-gray-500 mb-2">Comprobante de Consumo</p>
+                <div class="text-sm border border-gray-300 rounded px-4 py-1 font-bold">Mesa @Model.Mesa.NumeroMesa</div>
+            </div>
+
+            <div class="flex px-8 justify-between text-xs text-gray-500 mb-2">
+                <span>Orden: #@Model.OrdenId.ToString("D5")</span>
+                <span>@Model.FechaHoraInicio.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+
+            <div class="dashed-line mx-8"></div>
+
+            <div class="flex-1 overflow-y-auto px-8 py-2">
+                <div class="flex font-bold text-xs uppercase text-gray-500 border-b border-gray-200 pb-2 mb-2">
+                    <span class="w-[15%]">Cant</span>
+                    <span class="w-[60%]">Descripción</span>
+                    <span class="w-[25%] text-right">Monto</span>
+                </div>
+
+                @foreach (var det in Model.Detalles)
+                {
+                    <div class="flex text-sm mb-3">
+                        <span class="w-[15%] font-bold">@det.Cantidad</span>
+                        <span class="w-[60%] text-gray-800">@det.Plato?.Nombre</span>
+                        <span class="w-[25%] text-right font-medium">$@((det.Cantidad * det.PrecioUnitario).ToString("0.00"))</span>
+                    </div>
+                }
+            </div>
+
+            <div class="dashed-line mx-8"></div>
+
+            <div class="p-8 pt-4 bg-gray-50">
+                <div class="flex justify-between items-center text-xl font-bold bg-gray-200 p-4 rounded-xl">
+                    <span>TOTAL A PAGAR</span>
+                    <span>$@Model.Total.ToString("0.00")</span>
+                </div>
+                <div class="text-center text-xs text-gray-400 mt-6">
+                    ¡Gracias por su preferencia!
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Actions (60%) -->
+        <div class="w-[60%] bg-[#28282B] flex flex-col">
+            <header class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Resumen de Cuenta</h2>
+
+                <a href="/Mesas/Index" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition font-medium flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">pause_presentation</span>
+                    Dejar Abierta
+                </a>
+            </header>
+
+            <div class="flex-1 p-10 flex flex-col justify-center items-center gap-8">
+
+                <div class="text-center mb-4">
+                    <div class="text-gray-400 mb-2">Monto a cobrar</div>
+                    <div class="text-6xl font-bold text-green-400">$@Model.Total.ToString("0.00")</div>
+                </div>
+
+                <form asp-controller="Ordenes" asp-action="PagarYLiberarMesa" method="post" class="w-full max-w-md">
+                    <input type="hidden" name="ordenId" value="@Model.OrdenId" />
+
+                    <button type="submit" 
+                            class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-5 rounded-2xl text-2xl flex justify-center items-center gap-3 transition transform hover:scale-105 active:scale-95 shadow-lg shadow-green-900/20">
+                        <span class="material-symbols-outlined text-3xl">point_of_sale</span>
+                        REGISTRAR PAGO Y LIBERAR
+                    </button>
+                    <p class="text-center text-gray-500 mt-4 text-sm">Al confirmar se cerrará la orden y la mesa pasará a estado Libre.</p>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

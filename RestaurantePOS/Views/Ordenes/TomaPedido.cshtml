@@ -1,0 +1,209 @@
+@model IEnumerable<RestaurantePOS.Domain.Entities.Plato>
+@{
+    Layout = null;
+    ViewData["Title"] = "Toma de Pedido";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pedido Mesa @ViewBag.NumeroMesa - Prime Steakhouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <style>
+        body { background-color: #121212; color: #E3E2E6; }
+        .bg-surface { background-color: #28282B; }
+    </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden">
+
+    <!-- Left Side: Menu Items (60%) -->
+    <div class="w-[60%] flex flex-col bg-[#121212] border-r border-gray-800">
+        <!-- Header Menu -->
+        <header class="p-4 border-b border-gray-800 flex justify-between items-center bg-surface">
+            <div class="flex items-center gap-3">
+                <a href="/Mesas/Index" class="p-2 hover:bg-gray-700 rounded-full transition text-gray-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </a>
+                <h2 class="text-xl font-bold">Menú</h2>
+            </div>
+            <div class="text-sm text-gray-400">
+                Atiende: @ViewBag.NombreMesero
+            </div>
+        </header>
+
+        <!-- Menu Grid -->
+        <div class="flex-1 p-6 overflow-y-auto">
+            <!-- Categories could go here, omitting for simplicity, just listing plates -->
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach (var plato in Model)
+                {
+                    <button onclick="agregarPlato(@plato.PlatoId, '@Html.Raw(plato.Nombre.Replace("'", "\\'"))', @plato.Precio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" 
+                            class="bg-surface hover:bg-gray-700 text-left p-4 rounded-2xl shadow-md border border-gray-800 transition active:scale-95 flex flex-col h-32 justify-between">
+                        <span class="font-semibold line-clamp-2">@plato.Nombre</span>
+                        <span class="text-green-400 font-bold">$@plato.Precio.ToString("0.00")</span>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side: Ticket/Order (40%) -->
+    <div class="w-[40%] flex flex-col bg-surface">
+        <!-- Ticket Header -->
+        <div class="p-6 border-b border-gray-800 bg-[#1A1A1C]">
+            <h2 class="text-2xl font-bold mb-1">Mesa @ViewBag.NumeroMesa</h2>
+            <p class="text-gray-400 text-sm">Nueva Comanda</p>
+        </div>
+
+        <!-- Order Items List -->
+        <div class="flex-1 p-4 overflow-y-auto" id="ticketItems">
+            <!-- Items added via JS will appear here -->
+            <div id="emptyTicketMsg" class="h-full flex flex-col items-center justify-center text-gray-500">
+                <span class="material-symbols-outlined text-4xl mb-2 opacity-50">receipt</span>
+                <p>El ticket está vacío</p>
+            </div>
+        </div>
+
+        <!-- Ticket Footer / Summary -->
+        <div class="p-6 bg-[#1A1A1C] border-t border-gray-800">
+            <div class="flex justify-between items-center mb-4 text-xl">
+                <span class="font-semibold text-gray-300">Total:</span>
+                <span class="font-bold text-green-400" id="totalAmount">$0.00</span>
+            </div>
+
+            <button onclick="enviarOrden()" id="btnEnviar" disabled
+                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold py-4 rounded-xl text-lg flex justify-center items-center gap-2 transition">
+                <span class="material-symbols-outlined">send</span>
+                Enviar a Cocina
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const mesaId = @ViewBag.MesaId;
+        let ordenActual = [];
+
+        function agregarPlato(id, nombre, precio) {
+            const itemExistente = ordenActual.find(i => i.platoId === id);
+
+            if (itemExistente) {
+                itemExistente.cantidad++;
+            } else {
+                ordenActual.push({ platoId: id, nombre: nombre, precio: precio, cantidad: 1 });
+            }
+
+            actualizarTicket();
+        }
+
+        function incrementarCantidad(id) {
+            const item = ordenActual.find(i => i.platoId === id);
+            if (item) {
+                item.cantidad++;
+                actualizarTicket();
+            }
+        }
+
+        function decrementarCantidad(id) {
+            const itemIndex = ordenActual.findIndex(i => i.platoId === id);
+            if (itemIndex > -1) {
+                if (ordenActual[itemIndex].cantidad > 1) {
+                    ordenActual[itemIndex].cantidad--;
+                } else {
+                    ordenActual.splice(itemIndex, 1);
+                }
+                actualizarTicket();
+            }
+        }
+
+        function actualizarTicket() {
+            const ticketContainer = document.getElementById('ticketItems');
+            const emptyMsg = document.getElementById('emptyTicketMsg');
+            const btnEnviar = document.getElementById('btnEnviar');
+
+            if (ordenActual.length === 0) {
+                ticketContainer.innerHTML = '';
+                ticketContainer.appendChild(emptyMsg);
+                emptyMsg.style.display = 'flex';
+                btnEnviar.disabled = true;
+                actualizarTotal();
+                return;
+            }
+
+            if (emptyMsg) emptyMsg.style.display = 'none';
+            ticketContainer.innerHTML = '';
+
+            ordenActual.forEach(item => {
+                const subtotal = item.precio * item.cantidad;
+
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-[#252528] p-3 rounded-xl mb-3 border border-gray-700';
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-semibold text-sm mb-1">${item.nombre}</div>
+                        <div class="text-xs text-gray-400">$${item.precio.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center bg-[#1A1A1C] rounded-lg p-1 border border-gray-700">
+                            <button onclick="decrementarCantidad(${item.platoId})" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-md hover:bg-gray-600 transition"><span class="material-symbols-outlined text-sm">remove</span></button>
+                            <span class="w-6 text-center font-bold text-sm">${item.cantidad}</span>
+                            <button onclick="incrementarCantidad(${item.platoId})" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-md hover:bg-gray-600 transition"><span class="material-symbols-outlined text-sm">add</span></button>
+                        </div>
+                        <div class="w-16 text-right font-bold text-green-400">$${subtotal.toFixed(2)}</div>
+                    </div>
+                `;
+                ticketContainer.appendChild(div);
+            });
+
+            btnEnviar.disabled = false;
+            actualizarTotal();
+        }
+
+        function actualizarTotal() {
+            const total = ordenActual.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            document.getElementById('totalAmount').innerText = '$' + total.toFixed(2);
+        }
+
+        async function enviarOrden() {
+            if (ordenActual.length === 0) return;
+
+            const btnEnviar = document.getElementById('btnEnviar');
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Procesando...';
+
+            const payload = {
+                MesaId: mesaId,
+                Detalles: ordenActual.map(item => ({
+                    PlatoId: item.platoId,
+                    Cantidad: item.cantidad,
+                    PrecioUnitario: item.precio
+                }))
+            };
+
+            try {
+                const response = await fetch('/Ordenes/CrearDesdePOS', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = data.redirectUrl;
+                } else {
+                    alert('Error: ' + data.message);
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = '<span class="material-symbols-outlined">send</span> Enviar a Cocina';
+                }
+            } catch (error) {
+                alert('Error de conexión: ' + error);
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<span class="material-symbols-outlined">send</span> Enviar a Cocina';
+            }
+        }
+    </script>
+</body>
+</html>
