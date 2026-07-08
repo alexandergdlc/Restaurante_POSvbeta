@@ -20,9 +20,16 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Configuración de persistencia directa hacia la nube de Supabase (PostgreSQL)
+// Configuración con cadena directa y Estrategia de Reintentos ante fallas transitorias de red
 builder.Services.AddDbContext<RestauranteDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("SupabaseConnection")));
+    options.UseNpgsql(
+        "Host=db.bmeirocalsaiaiifbzbv.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=RestaurantePos2026;sslmode=require;",
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorCodesToAdd: null
+        )
+    ));
 
 var app = builder.Build();
 
@@ -30,7 +37,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -42,6 +48,7 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 app.MapRazorPages();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")

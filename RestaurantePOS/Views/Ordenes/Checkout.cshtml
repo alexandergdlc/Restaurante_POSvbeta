@@ -85,21 +85,39 @@
 
             <div class="flex-1 p-10 flex flex-col justify-center items-center gap-8">
 
+                @if (ViewBag.PagoRegistrado == true || Model.Estado == "Pagada")
+                {
+                    <div class="w-full max-w-md bg-green-900/30 border border-green-600 text-green-300 rounded-2xl p-5 text-center">
+                        <div class="font-bold text-lg mb-1">Pago registrado correctamente</div>
+                        <div class="text-sm text-green-200/80">La orden quedó cerrada y la mesa fue liberada.</div>
+                    </div>
+                }
+
                 <div class="text-center mb-4">
                     <div class="text-gray-400 mb-2">Monto a cobrar</div>
                     <div class="text-6xl font-bold text-green-400">$@Model.Total.ToString("0.00")</div>
                 </div>
 
-                <form asp-controller="Ordenes" asp-action="PagarYLiberarMesa" method="post" class="w-full max-w-md">
-                    <input type="hidden" name="ordenId" value="@Model.OrdenId" />
+                @if (Model.Estado != "Pagada")
+                {
+                    <form asp-controller="Ordenes" asp-action="PagarYLiberarMesa" method="post" class="w-full max-w-md">
+                        <input type="hidden" name="ordenId" value="@Model.OrdenId" />
 
-                    <button type="submit" 
-                            class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-5 rounded-2xl text-2xl flex justify-center items-center gap-3 transition transform hover:scale-105 active:scale-95 shadow-lg shadow-green-900/20">
-                        <span class="material-symbols-outlined text-3xl">point_of_sale</span>
-                        REGISTRAR PAGO Y LIBERAR
-                    </button>
-                    <p class="text-center text-gray-500 mt-4 text-sm">Al confirmar se cerrará la orden y la mesa pasará a estado Libre.</p>
-                </form>
+                        <button type="submit" 
+                                class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-5 rounded-2xl text-2xl flex justify-center items-center gap-3 transition transform hover:scale-105 active:scale-95 shadow-lg shadow-green-900/20">
+                            <span class="material-symbols-outlined text-3xl">point_of_sale</span>
+                            REGISTRAR PAGO Y LIBERAR
+                        </button>
+                        <p class="text-center text-gray-500 mt-4 text-sm">Al confirmar se cerrará la orden y la mesa pasará a estado Libre.</p>
+                    </form>
+                }
+                else
+                {
+                    <a href="/Mesas/Index" class="w-full max-w-md bg-gray-700 hover:bg-gray-600 text-white font-bold py-5 rounded-2xl text-2xl flex justify-center items-center gap-3 transition transform hover:scale-105 active:scale-95 shadow-lg">
+                        <span class="material-symbols-outlined text-3xl">table_restaurant</span>
+                        VOLVER AL SALÓN
+                    </a>
+                }
 
             </div>
         </div>

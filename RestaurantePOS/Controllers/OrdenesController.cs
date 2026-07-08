@@ -106,94 +106,117 @@ public class OrdenesController : Controller
             return BadRequest(new { success = false, message = "La orden está vacía." });
         }
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        var strategy = _context.Database.CreateExecutionStrategy();
         try
         {
-            var mesa = await _context.Mesas.FindAsync(ordenDto.MesaId);
-            if (mesa == null) return BadRequest(new { success = false, message = "Mesa no válida." });
-
-            // Crear la Orden usando el empleado recuperado
-            var nuevaOrden = new Orden
+            await strategy.ExecuteAsync(async () =>
             {
-                MesaId = ordenDto.MesaId,
-                EmpleadoId = empleadoId.Value,
-                FechaHoraInicio = DateTime.UtcNow,
-                Estado = "Pendiente", // u "Activa"
-                Total = ordenDto.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
-                Detalles = new List<DetalleOrden>()
-            };
+                await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            foreach (var det in ordenDto.Detalles)
-            {
-                if (det.Cantidad <= 0 || det.PrecioUnitario < 0) continue;
+                var mesa = await _context.Mesas.FindAsync(ordenDto.MesaId);
+                if (mesa == null) throw new InvalidOperationException("Mesa no válida.");
 
-                nuevaOrden.Detalles.Add(new DetalleOrden
+                // Crear la Orden usando el empleado recuperado
+                var nuevaOrden = new Orden
                 {
-                    PlatoId = det.PlatoId,
-                    Cantidad = det.Cantidad,
-                    PrecioUnitario = det.PrecioUnitario
-                });
-            }
+                    MesaId = ordenDto.MesaId,
+                    EmpleadoId = empleadoId.Value,
+                    FechaHoraInicio = DateTime.UtcNow,
+                    Estado = "Pendiente", // u "Activa"
+                    Total = ordenDto.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
+                    Detalles = new List<DetalleOrden>()
+                };
 
-            _context.Ordenes.Add(nuevaOrden);
+                foreach (var det in ordenDto.Detalles)
+                {
+                    if (det.Cantidad <= 0 || det.PrecioUnitario < 0) continue;
 
-            // Actualizar estado de la mesa
-            mesa.Estado = "Ocupada";
-            _context.Mesas.Update(mesa);
+                    nuevaOrden.Detalles.Add(new DetalleOrden
+                    {
+                        PlatoId = det.PlatoId,
+                        Cantidad = det.Cantidad,
+                        PrecioUnitario = det.PrecioUnitario
+                    });
+                }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch (DbUpdateException dbEx)
-            {
-                await transaction.RollbackAsync();
+                _context.Ordenes.Add(nuevaOrden);
 
-                // Extraer el mensaje interno específico de Supabase/PostgreSQL
-                var errorMessage = dbEx.InnerException != null 
-                    ? dbEx.InnerException.Message 
-                    : dbEx.Message;
+                // Actualizar estado de la mesa
+                mesa.Estado = "Ocupada";
+                _context.Mesas.Update(mesa);
 
-                return StatusCode(500, new { success = false, message = $"Fallo al guardar en BD: {errorMessage}" });
-            }
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    await transaction.RollbackAsync();
+
+                    // Extraer el mensaje interno específico de Supabase/PostgreSQL
+                    var errorMessage = dbEx.InnerException != null
+                        ? dbEx.InnerException.Message
+                        : dbEx.Message;
+
+                    throw new Exception($"Fallo al guardar en BD: {errorMessage}", dbEx);
+                }
+            });
 
             return Json(new { success = true, redirectUrl = Url.Action("Checkout", new { mesaId = ordenDto.MesaId }) });
         }
+        catch (InvalidOperationException ioe)
+        {
+            return BadRequest(new { success = false, message = ioe.Message });
+        }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { success = false, message = "Error interno: " + ex.Message });
         }
     }
 
     [HttpGet]
-    public async Task<IActionResult> Checkout(int mesaId)
+    public async Task<IActionResult> Checkout(int mesaId, int? ordenId = null)
     {
         var empleadoId = HttpContext.Session.GetInt32("EmpleadoID");
         if (!empleadoId.HasValue) return RedirectToAction("Index", "Home");
 
         try
         {
-            var orden = await _context.Ordenes
-                .Include(o => o.Mesa)
-                .Include(o => o.Detalles)
-                .ThenInclude(d => d.Plato)
-                .Where(o => o.MesaId == mesaId && o.Estado != "Pagada")
-                .OrderByDescending(o => o.FechaHoraInicio)
-                .FirstOrDefaultAsync();
+            Orden? orden;
+
+            if (ordenId.HasValue)
+            {
+                orden = await _context.Ordenes
+                    .Include(o => o.Mesa)
+                    .Include(o => o.Detalles)
+                    .ThenInclude(d => d.Plato)
+                    .FirstOrDefaultAsync(o => o.OrdenId == ordenId.Value);
+
+                ViewBag.PagoRegistrado = true;
+            }
+            else
+            {
+                orden = await _context.Ordenes
+                    .Include(o => o.Mesa)
+                    .Include(o => o.Detalles)
+                    .ThenInclude(d => d.Plato)
+                    .Where(o => o.MesaId == mesaId && o.Estado != "Pagada")
+                    .OrderByDescending(o => o.FechaHoraInicio)
+                    .FirstOrDefaultAsync();
+
+                if (orden != null && orden.Mesa.Estado == "Ocupada")
+                {
+                    // Opcional: Cambiar estado a 'Cuenta' si venía de 'Ocupada'
+                    orden.Mesa.Estado = "Cuenta";
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             if (orden == null)
             {
                 // Si no hay orden, volver a mesas
                 return RedirectToAction("Index", "Mesas");
-            }
-
-            // Opcional: Cambiar estado a 'Cuenta' si venía de 'Ocupada'
-            if (orden.Mesa.Estado == "Ocupada")
-            {
-                orden.Mesa.Estado = "Cuenta";
-                await _context.SaveChangesAsync();
             }
 
             return View(orden);
@@ -210,41 +233,63 @@ public class OrdenesController : Controller
         var empleadoId = HttpContext.Session.GetInt32("EmpleadoID");
         if (!empleadoId.HasValue) return RedirectToAction("Index", "Home");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        var strategy = _context.Database.CreateExecutionStrategy();
+        int? ordenProcesadaId = null;
+        int? mesaProcesadaId = null;
+
         try
         {
-            var orden = await _context.Ordenes
-                .Include(o => o.Mesa)
-                .FirstOrDefaultAsync(o => o.OrdenId == ordenId);
-
-            if (orden == null) return NotFound("Orden no encontrada.");
-
-            orden.Estado = "Pagada";
-            orden.FechaHoraCierre = DateTime.UtcNow;
-
-            if (orden.Mesa != null)
+            await strategy.ExecuteAsync(async () =>
             {
-                orden.Mesa.Estado = "Libre";
-            }
+                await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            // Aquí se podría guardar también la transacción de pago en la tabla TransaccionesPago si es necesario
-            var pago = new TransaccionPago
-            {
-                OrdenId = orden.OrdenId,
-                MetodoPago = "Efectivo", // Hardcoded para simplificar, idealmente viene de la UI
-                Monto = orden.Total,
-                FechaPago = DateTime.UtcNow
-            };
-            _context.TransaccionesPago.Add(pago);
+                var orden = await _context.Ordenes
+                    .Include(o => o.Mesa)
+                    .FirstOrDefaultAsync(o => o.OrdenId == ordenId);
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+                if (orden == null) throw new InvalidOperationException("Orden no encontrada.");
 
-            return RedirectToAction("Index", "Mesas");
+                ordenProcesadaId = orden.OrdenId;
+                mesaProcesadaId = orden.MesaId;
+
+                orden.Estado = "Pagada";
+                orden.FechaHoraCierre = DateTime.UtcNow;
+
+                if (orden.Mesa != null)
+                {
+                    orden.Mesa.Estado = "Libre";
+                }
+
+                // Aquí se podría guardar también la transacción de pago en la tabla TransaccionesPago si es necesario
+                var pago = new TransaccionPago
+                {
+                    OrdenId = orden.OrdenId,
+                    MetodoPago = "Efectivo", // Hardcoded para simplificar, idealmente viene de la UI
+                    Monto = orden.Total,
+                    FechaPago = DateTime.UtcNow
+                };
+                _context.TransaccionesPago.Add(pago);
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
+
+            return RedirectToAction("Checkout", new { mesaId = mesaProcesadaId ?? 0, ordenId = ordenProcesadaId });
+        }
+        catch (InvalidOperationException ioe)
+        {
+            return NotFound(ioe.Message);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, "Error procesando el pago: " + ex.Message);
         }
 
