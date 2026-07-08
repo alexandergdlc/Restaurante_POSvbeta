@@ -20,10 +20,13 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Configuración con cadena directa y Estrategia de Reintentos ante fallas transitorias de red
+// Configuración de base de datos leyendo variables de entorno con fallback al Session Pooler
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                       ?? "Host=aws-1-us-west-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.bmeirocalsaiaiifbzbv;Password=RestaurantePos2026;Ssl Mode=Require;Trust Server Certificate=true;Pooling=false;";
+
 builder.Services.AddDbContext<RestauranteDbContext>(options =>
     options.UseNpgsql(
-        "Host=db.bmeirocalsaiaiifbzbv.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=RestaurantePos2026;sslmode=require;",
+        connectionString,
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(30),
