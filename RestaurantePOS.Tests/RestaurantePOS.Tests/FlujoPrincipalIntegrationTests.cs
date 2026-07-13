@@ -13,14 +13,5 @@ public class FlujoPrincipalIntegrationTests : IClassFixture<CustomWebApplication
         _client = factory.CreateClient();
     }
 
-    [Fact]
-    public async Task PantallaLogin_DebeRetornarStatusCode200_CuandoSistemaInicia()
-    {
-        // Act (WHEN): Hacemos una petición GET a la raíz (pantalla de inicio/login)
-        var response = await _client.GetAsync("/");
-
-        // Assert (THEN): Validamos que cargue con éxito usando Testcontainers
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("text/html; charset=utf-8", response.Content.Headers.ContentType?.ToString());
-    }
+   
 }

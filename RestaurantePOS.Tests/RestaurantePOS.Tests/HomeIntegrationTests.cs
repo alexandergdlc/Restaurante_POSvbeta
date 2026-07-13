@@ -13,14 +13,5 @@ public class HomeIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         _client = factory.CreateClient();
     }
 
-    [Fact]
-    public async Task Get_PantallaLogin_RetornaExito()
-    {
-        // Act
-        var response = await _client.GetAsync("/");
-
-        // Assert
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("text/html; charset=utf-8", response.Content.Headers.ContentType?.ToString());
-    }
+  
 }

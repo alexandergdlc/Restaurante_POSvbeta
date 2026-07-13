@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="01_analisis_sdd.md" />
+    <File Path="02_arquitectura.md" />
+    <File Path="03_diseno_bd_prototipo.md" />
+    <File Path="04_agente_planificacion.md" />
+    <File Path="05_invariante_igv.md" />
+  </Folder>
   <Project Path="RestaurantePOS.Domain/RestaurantePOS.Domain.csproj" />
   <Project Path="RestaurantePOS.Infrastructure/RestaurantePOS.Infrastructure.csproj" />
   <Project Path="RestaurantePOS.Tests/RestaurantePOS.Tests/RestaurantePOS.Tests.csproj" Id="4ba5f465-a8a3-4cf0-844b-54877d2ea71d" />

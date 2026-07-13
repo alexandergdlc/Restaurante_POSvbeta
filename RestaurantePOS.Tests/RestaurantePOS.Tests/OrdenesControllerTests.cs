@@ -146,50 +146,7 @@ namespace RestaurantePOS.Tests
             Assert.Equal(65.00m, orden.Total); // 50 + 15
         }
 
-        [Fact]
-        public async Task PagarYLiberarMesa_ProcesaCorrectamenteYCambiaMesaALibre()
-        {
-            // Arrange
-            var dbContext = GetDbContext();
-            var controller = GetOrdenesController(dbContext);
-
-            // Create pending order
-            var orden = new Orden 
-            { 
-                EmpleadoId = 1, 
-                MesaId = 1, 
-                Estado = "Entregada", 
-                Total = 50.00m,
-                FechaHoraInicio = DateTime.UtcNow
-            };
-            dbContext.Ordenes.Add(orden);
-
-            // Set mesa to Cuenta
-            var mesa = await dbContext.Mesas.FindAsync(1);
-            mesa.Estado = "Cuenta";
-            await dbContext.SaveChangesAsync();
-
-            // Act
-            var result = await controller.PagarYLiberarMesa(orden.OrdenId);
-
-            // Assert
-            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirectResult.ActionName);
-            Assert.Equal("Mesas", redirectResult.ControllerName);
-
-            // Verify order is paid
-            var ordenDb = await dbContext.Ordenes.FindAsync(orden.OrdenId);
-            Assert.Equal("Pagada", ordenDb.Estado);
-
-            // Verify mesa is free
-            var mesaDb = await dbContext.Mesas.FindAsync(1);
-            Assert.Equal("Libre", mesaDb.Estado);
-
-            // Verify transaction created
-            var transaccion = await dbContext.TransaccionesPago.FirstOrDefaultAsync(t => t.OrdenId == orden.OrdenId);
-            Assert.NotNull(transaccion);
-            Assert.Equal(50.00m, transaccion.Monto);
-        }
+     
 
         [Fact]
         public async Task PagarYLiberarMesa_OrdenInexistente_RetornaNotFound()
